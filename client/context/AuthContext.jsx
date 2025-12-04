@@ -3,44 +3,39 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 
-const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+const backendURL = import.meta.env.VITE_BACKEND_URL ;
 axios.defaults.baseURL = backendURL;
 
 export const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(localStorage.getItem("token") || null);
-  const [authUser, setAuthUser] = useState(JSON.parse(localStorage.getItem("user")) || null);
+  const [token, setToken] = useState(localStorage.getItem('token') || null);
+  const [authUser, setAuthUser] = useState(null);
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [socket, setSocket] = useState(null);
 
   // Socket connection helper — server expects `userid` in handshake query
   const connectSocket = (userData) => {
-    if (!userData) return;
-    // if there's already a connected socket for this user, skip
-    if (socket?.connected) return;
+    if (!userData || socket?.connected) return;
 
-    // create socket and subscribe to server events
-    const s = io(backendURL, { query: { userid: userData._id } });
-    setSocket(s);
-    s.on("online-users", (userIds) => setOnlineUsers(userIds || []));
+    const newSocket = io(backendURL, { query: { userid: userData._id, } });
+
+    newSocket.connect();
+    setSocket(newSocket);
+    newSocket.on("online-users", (userIds) => setOnlineUsers(userIds));
   };
 
 
   const checkAuth = async () => {
-    if (!token) return;
     try {
       const { data } = await axios.get("/api/auth/check");
       if (data.success) {
-        const u = data.user || data.userData || null;
-        setAuthUser(u);
-        connectSocket(u);
+        
+        setAuthUser(data.user);
+        connectSocket(data.user);
       }
     } catch (err) {
-      toast.error("Session expired. Please login again.");
-      setToken(null);
-      setAuthUser(null);
-      localStorage.removeItem("token");
+      toast.error(err.message);
     }
   };
 
@@ -52,19 +47,19 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token]);
 
+
   // ✅ LOGIN & SIGNUP
   const login = async (state, credentials) => {
     try {
       const { data } = await axios.post(`/api/auth/${state}`, credentials);
 
       if (data.success) {
-        const u = data.user || data.userData || null;
-        setAuthUser(u);
-        connectSocket(u);
+   
+        setAuthUser(data.user);
+        connectSocket(data.user);
         axios.defaults.headers.common["token"] = data.token;
         setToken(data.token);
         localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(u));
         toast.success("Login successful ✅");
       } else {
         toast.error(data.message);
@@ -78,11 +73,12 @@ export const AuthProvider = ({ children }) => {
   // ✅ UPDATE PROFILE
   const updateProfile = async (body) => {
     try {
-      const { data } = await axios.put("/api/auth/updateProfile", body);
+      const { data } = await axios.put("/api/auth/update-profile", body);
 
       if (data.success) {
         setAuthUser(data.user);
         toast.success("Profile updated successfully");
+         localStorage.setItem("user", JSON.stringify(data.user));
       } else {
         toast.error(data.message);
       }
@@ -95,7 +91,6 @@ export const AuthProvider = ({ children }) => {
   // ✅ LOGOUT
   const logout = () => {
     localStorage.removeItem("token");
-    localStorage.removeItem("user");
     setToken(null);
     setAuthUser(null);
     setOnlineUsers([]);

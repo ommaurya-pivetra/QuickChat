@@ -19,11 +19,10 @@ export const signup = async (req, res) => {
 
         const user = await User.create({ fullName, email, password: hashedPassword, bio });
         const token = generateToken(user._id);
-
         const userObject = user.toObject();
         userObject.password = undefined;
 
-         return res.cookie("token", token, { httpOnly: true }).status(200).json({ success: true, message: "Login successful", user: userObject, token });
+         return res.status(200).json({ success: true, message: "Login successful", userData: userObject, token });
          
         } catch (error) {
         console.error("Error during user registration:", error);
@@ -47,7 +46,7 @@ export const login = async (req, res) => {
             const token = generateToken(user._id);
             const userObject = user.toObject();
             userObject.password = undefined;
-            return res.cookie("token", token, { httpOnly: true }).status(200).json({ success: true, message: "Login successful", user: userObject, token });
+            return res.cookie("token", token, { httpOnly: true }).status(200).json({ success: true, message: "Login successful", userData: userObject, token });
         }
 
         return res.status(403).json({ success: false, message: "Incorrect password" });

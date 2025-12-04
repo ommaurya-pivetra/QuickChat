@@ -1,18 +1,42 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom';
 import assets from '../assets/assets'
+import { useContext } from 'react';
+import { AuthContext } from '../../context/AuthContext.jsX';
+import { useEffect } from 'react';
+
 
 const ProfilePage = () => {
+  const {authUser,updateProfile}=useContext(AuthContext);
   const [selectedImg,setSelectedImg]=useState(null);
   const navigate = useNavigate();
-  const [name,setName]=useState('');
-  const [bio,setBio]=useState('Hi there! I am using ChatApp.');
+  const [name,setName]=useState("");
+  const [bio,setBio]=useState("");
+
   const handleSubmit=async(e)=>{
     e.preventDefault();
-    // Handle profile update logic here
-    console.log('Profile updated:', { name, bio, selectedImg });
-    navigate('/');
+    if(!selectedImg){
+      await updateProfile({fullName:name,bio});
+      navigate('/');
+      return;
+    }
+    const reader=new FileReader();
+    reader.readAsDataURL(selectedImg);
+    reader.onload=async()=>{
+      await updateProfile({fullName:name,bio,profilePic:reader.result});
+      console.log('Profile updated:', { fullName:name, bio, selectedImg });
+      navigate('/');
+    };
+    
   }
+
+  useEffect(()=>{
+  if(authUser){
+    setName(authUser.fullName||"");
+    setBio( authUser.bio||"");
+  }
+  },[authUser]);
+
   return (
     <div className='min-h-screen bg-cover bg-no-repeat flex items-center justify-center'>
       <div className='w-5/6 max-w-2xl backdrop-blur-2xl text-gray-300 border-2 border-gray-600 flex items-center justify-between max-sm:flex-col-reverse rounded-lg'>
@@ -26,11 +50,10 @@ const ProfilePage = () => {
           <input onChange={(e)=>setName(e.target.value)} value={name} type="text" required placeholder='Your Name' className='p-2 border border-gray-500 rounded-md focus:outline-none  focus:ring-2 focus:ring-violet-500' />
          
           <textarea onChange={(e)=>setBio(e.target.value)} value={bio} placeholder='Your Bio' className='p-2 border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-violet-500' rows={4} />
-          
-          
+
           <button type='submit' className='p-2 bg-linear-to-r from-purple-400 to-violet-600 text-white rounded-full text-lg cursor-pointer'>Save</button>
         </form>
-        <img className='max-w-44 aspect-square rounded-full mx-10 max-sm:mt-10' src={assets.logo_icon} alt="" />
+        <img className={`max-w-44 aspect-square rounded-full mx-10 max-sm:mt-10 ${selectedImg && 'rounded-full'}`} src={assets.logo_icon} alt="" />
       </div>
 
     </div>

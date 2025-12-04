@@ -33,7 +33,9 @@ io.on("connection",(socket)=>{
 });
 
 app.use(cors());
-app.use(express.json({limit: '4mb'}));
+// Increase body size limits to allow base64 image payloads from client
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use("/api/status", (req,res)=>res.send("Server is running"));
 app.use("/api/auth", userRouter);
 app.use("/api/messages",messageRouter);

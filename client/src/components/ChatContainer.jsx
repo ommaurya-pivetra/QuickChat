@@ -1,10 +1,11 @@
-import React, { use, useContext, useEffect, useRef, useState } from 'react'
+import React, { useContext, useEffect, useRef, useState } from 'react'
+import toast from 'react-hot-toast'
 import assets, { messagesDummyData } from '../assets/assets'
 import { formatMessage } from '../lib/utils';
 import { ChatContext } from '../../context/ChatContext';
-import { AuthContext } from '../../context/AuthContext';
+import { AuthContext } from '../../context/AuthContext.jsx';
 
-const CardContainer = () => {
+const ChatContainer = () => {
   const {messages,selectedUser,setSelectedUser,sendMessage,getMessages}=useContext(ChatContext);
   useContext(ChatContext);
 
@@ -45,16 +46,19 @@ const CardContainer = () => {
     }
   },[selectedUser]);
 
-  const scrollEnd=useRef();
+  const scrollEnd=useRef(null);
 
-  useEffect(()=>{
-    if(scrollEnd.current && messages){
-      scrollEnd.current.scrollIntoView({behavior:"smooth"});
-    }
-  },[messages]);
+useEffect(() => {
+  if (!scrollEnd.current) return;
+
+  scrollEnd.current.scrollIntoView({
+    behavior: "smooth",
+    block: "end",
+  });
+}, [messages]);
 
   return selectedUser? (
-    <div className='h-full overflow-scroll relative backdrop-blur-lg'>
+    <div className='h-full overflow-hidden relative backdrop-blur-lg'>
       <div className='flex items-center gap-3 py-3 mx-4 border-b border-stone-500 '>
         <img src={selectedUser.profilePic || assets.avatar_icon} alt="" className='w-8 rounded-full'/>
         <p className='flex-1 text-lg text-white flex items-center gap-2'>{selectedUser.fullName}{onlineUsers.includes(selectedUser._id) && <span className='w-2 h-2 rounded-full bg-green-500'></span> }
@@ -81,7 +85,7 @@ const CardContainer = () => {
                 alt=""
               />
 
-              <p className='text-gray-500'>{formatMessageTime( message.createdAt)}</p>
+              <p className='text-gray-500'>{formatMessage(message.createdAt)}</p>
             </div>
           </div>
         ))}
@@ -91,7 +95,7 @@ const CardContainer = () => {
         <div className='flex-1 flex items-center bg-gray-100/12 px-3 rounded-full'>
           <input onChange={(e)=>setInput(e.target.value)} value={input} onKeyDown={(e)=>e.key ==="Enter" ? handleSendMessage(e):null} type="text" placeholder='Send a message' className='flex-1 text-sm p-3 border-none rounded-lg outline-none text-white placeholder-gray-400' />
         <input onChange={handleSendImage} type="file" id='image' accept='image/png, image/jpeg' hidden/> 
-        <label htmlFor="image"><img src={assets.gallery_icon} className='w-5 mr-2 cursor-pointer' alt="" /></label></div> <img src={assets.send_button} className='w-7 cursor-pointer' alt="" />
+        <label htmlFor="image"><img src={assets.gallery_icon} className='w-5 mr-2 cursor-pointer' alt="" /></label></div> <img onClick={handleSendMessage} src={assets.send_button} className='w-7 cursor-pointer' alt="" />
       </div>
     </div>
   ):(<div className='flex justify-center items-center flex-col gap-2 text-gray-500 bg-white/10 max-md:hidden'>
@@ -100,4 +104,4 @@ const CardContainer = () => {
     </div>)     
 }
 
-export default CardContainer
+export default ChatContainer

@@ -9,7 +9,7 @@ export const getUserForSidebar = async (req, res) => {
 
         // Optionally calculate unseen message counts per user
         const promises = users.map(async (user) => {
-            const count = await Message.countDocuments({ senderId: user._id, reciverId: userId, seen: false });
+            const count = await Message.countDocuments({ senderId: user._id, receiverId: userId, seen: false });
             return { userId: user._id, unseen: count };
         });
         const unseenArray = await Promise.all(promises);
@@ -28,16 +28,16 @@ export const getUserForSidebar = async (req, res) => {
 export const getMessage=async(req,res)=>{
     try{
         const userId=req.user._id;
-        const {reciverId}=req.params;
+        const {id:selectedUserId}=req.params;
         const messages=await Message.find({
             $or:[
-                {senderId:userId,reciverId:reciverId},
-                {senderId:reciverId,reciverId:userId},
+                {senderId:userId,receiverId:selectedUserId},
+                {senderId:selectedUserId,receiverId:userId},
             ],
-        }).sort({createdAt:1});
+        });
         await Message.updateMany(
-            {senderId:reciverId,reciverId:userId},
-            {$set:{seen:true}}
+            {senderId:selectedUserId,receiverId:userId},
+            {seen:true}
         );
         return res.status(200).json({
             success:true,
@@ -75,22 +75,24 @@ export const markMessagesAsSeen=async(req,res)=>{
 }
 export const sendMessage = async (req, res) => {
     try {
+        if (!req.user) {
+            return res.status(401).json({ message: "Unauthorized - No token" });
+        }
         const senderId = req.user._id;
-        // Accept receiver id in body (route is POST /send)
-        const { reciverId, text, image } = req.body;
+        const receiverId = req.params.id;
+        const { text, image } = req.body;
 
         let imageUrl = null;
         if (image) {
-            const upload = await cloudinary.uploader.upload(image);
+            const upload = await cloudinary.uploader.upload(image, { folder: "messages" });
             imageUrl = upload.secure_url;
         }
 
-        const newMessage = new Message({ senderId, reciverId, text, image: imageUrl });
+        const newMessage = await Message.create({ senderId, receiverId, text, image: imageUrl });
 
-        await newMessage.save();
         return res.status(200).json({ success: true, message: "Message sent successfully", newMessage });
     } catch (error) {
-        console.error("Error sending message:", error);
-        return res.status(500).json({ success: false, message: "Internal server error" });
+        console.error("SEND MESSAGE ERROR:", error);
+        return res.status(500).json({ success: false, message: error.message });
     }
 };
