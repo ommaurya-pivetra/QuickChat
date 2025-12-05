@@ -2,6 +2,14 @@ import Message from "../models/Message.js";
 import User from "../models/User.js";
 import cloudinary from '../lib/Cloudinary.js'
 import { io, userSocketMap } from '../server.js';
+import { GoogleGenAI } from "@google/genai";
+import dotenv from "dotenv";
+dotenv.config();
+
+const genAI = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+});
+
 
 export const getUserForSidebar = async (req, res) => {
     try {
@@ -96,10 +104,43 @@ export const sendMessage = async (req, res) => {
         if (receiverSocketId) {
             io.to(receiverSocketId).emit("newMessage", newMessage);
         }
+        if(receiverId===process.env.AI_USER_ID){
+          await aiSendMessage(senderId, text);
+        }
 
         return res.status(200).json({ success: true, message: "Message sent successfully", newMessage });
     } catch (error) {
         console.error("SEND MESSAGE ERROR:", error);
         return res.status(500).json({ success: false, message: error.message });
     }
+};
+
+const aiSendMessage = async (senderId, text) => {
+  try {
+    const response = await genAI.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: text,
+    });
+
+    const aiReply = response.candidates[0].content.parts[0].text;
+
+   
+
+    // ✅ When ready, you can save and emit:
+    const newMessage = await Message.create({
+      senderId: process.env.AI_USER_ID,
+      receiverId: senderId,
+      text: aiReply,
+    });
+
+    const receiverSocketId = userSocketMap[senderId];
+        if (receiverSocketId) {
+            io.to(receiverSocketId).emit("newMessage", newMessage);
+    }
+     console.log("AI USER ID:", process.env.AI_USER_ID);
+    
+
+  } catch (err) {
+    console.error("❌ GEMINI ERROR:", err.message);
+  }
 };
