@@ -18,7 +18,7 @@ const Sidebar = () => {
     }=useContext(ChatContext);
   
     const navigate = useNavigate();
-    const [input,setInput]=useState(false);
+    const [input,setInput]=useState('');
     const filteredUsers=input? users.filter((user)=>
         user.fullName.toLowerCase().includes(input.toLowerCase())
     ): users;
