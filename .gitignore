@@ -1,4 +1,17 @@
-node_modules/
+# Ignore all node modules
+node_modules
+client/node_modules
+server/node_modules
+
+# Ignore all env files
 .env
-dist/
-build/
+client/.env
+server/.env
+.env.local
+.env.development
+.env.production
+
+# Other common ignores
+dist
+build
+.DS_Store
