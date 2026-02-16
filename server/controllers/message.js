@@ -104,11 +104,15 @@ export const sendMessage = async (req, res) => {
         if (receiverSocketId) {
             io.to(receiverSocketId).emit("newMessage", newMessage);
         }
-        if(receiverId===process.env.AI_USER_ID){
-          await aiSendMessage(senderId, text);
-        }
 
-        return res.status(200).json({ success: true, message: "Message sent successfully", newMessage });
+        // Respond immediately so the sender's client can append the message first
+        res.status(200).json({ success: true, message: "Message sent successfully", newMessage });
+
+        // If sending to the AI user, trigger the AI reply asynchronously so it doesn't arrive before the user's message
+        if (receiverId === process.env.AI_USER_ID) {
+          aiSendMessage(senderId, text).catch(err => console.error("AI send message error:", err));
+        }
+        return;
     } catch (error) {
         console.error("SEND MESSAGE ERROR:", error);
         return res.status(500).json({ success: false, message: error.message });
